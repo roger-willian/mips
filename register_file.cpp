@@ -36,10 +36,10 @@ SC_MODULE (register_file) {
 
   // Constructor for register file
   SC_CTOR(register_file) {
+    bank[0] = 0;
     // cout<<"Executing new"<< name() << endl;
     SC_METHOD(action);
     sensitive << clock.pos();
-    bank[0] = 0;
   } // End of Constructor
 
 }; // End of Module counter

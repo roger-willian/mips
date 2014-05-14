@@ -1,6 +1,7 @@
 #include "systemc.h"
 #include "functions.h"
-#include "mips.cpp"
+#include "operational_unit.cpp"
+#include "control_unit.cpp"
 
 int sc_main(int argc, char ** argv){
   
@@ -38,24 +39,46 @@ int sc_main(int argc, char ** argv){
   // PC Source signals
   sc_signal< sc_uint<2> >       PCSource;
   
+  //reset
+  sc_signal< bool >             reset;
   
+  int i;
+  char opt;
   
-  mips mcu("MCU");
-    mcu.clock(clock);
-    mcu.PCWriteCond(PCWriteCond);
-    mcu.PCWrite(PCWrite);
-    mcu.IorD(IorD);
-    mcu.MemRead(MemRead);
-    mcu.MemWrite(MemWrite);
-    mcu.MemtoReg(MemtoReg);
-    mcu.IRWrite(IRWrite);
-    mcu.inst_code(inst_code);
-    mcu.RegDst(RegDst);
-    mcu.RegWrite(RegWrite);
-    mcu.ALUSrcA(ALUSrcA);  
-    mcu.ALUSrcB(ALUSrcB);
-    mcu.ALUOp(ALUOp);
-    mcu.PCSource(PCSource);
+  operational_unit ou("OU");
+    ou.clock(clock);
+    ou.PCWriteCond(PCWriteCond);
+    ou.PCWrite(PCWrite);
+    ou.IorD(IorD);
+    ou.MemRead(MemRead);
+    ou.MemWrite(MemWrite);
+    ou.MemtoReg(MemtoReg);
+    ou.IRWrite(IRWrite);
+    ou.inst_code(inst_code);
+    ou.RegDst(RegDst);
+    ou.RegWrite(RegWrite);
+    ou.ALUSrcA(ALUSrcA);  
+    ou.ALUSrcB(ALUSrcB);
+    ou.ALUOp(ALUOp);
+    ou.PCSource(PCSource);
+    
+  control_unit control("CONTROL");
+    control.clock(clock);
+    control.PCWriteCond(PCWriteCond);
+    control.PCWrite(PCWrite);
+    control.IorD(IorD);
+    control.MemRead(MemRead);
+    control.MemWrite(MemWrite);
+    control.MemtoReg(MemtoReg);
+    control.IRWrite(IRWrite);
+    control.inst_code(inst_code);
+    control.RegDst(RegDst);
+    control.RegWrite(RegWrite);
+    control.ALUSrcA(ALUSrcA);  
+    control.ALUSrcB(ALUSrcB);
+    control.ALUOp(ALUOp);
+    control.PCSource(PCSource);
+    control.reset(reset);
 
 //   clock.write(0);
 //   MemRead.write(0);
@@ -65,8 +88,19 @@ int sc_main(int argc, char ** argv){
 //   RegWrite.write(0);
 //   MemtoReg.write(0);
 //   RegDst.write(0);
-//   
+// 
+   reset.write(1);
    sc_start();
+   reset.write(0);
+   ou.dumpMemory();
+   while((opt = getchar()) != 's'){
+      cout << "<<<<<<" << endl;
+      run(&clock, 1);
+      cout << ">>>>>>" << endl;
+      ou.showInfo();
+      control.showInfo();
+   }   
+   ou.dumpMemory();
 //   
 //   
 //   // read instruction from address #0

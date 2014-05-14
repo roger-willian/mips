@@ -21,7 +21,6 @@ SC_MODULE (instruction_register) {
     if (IRWrite.read() == 1) {
       log("IR: writing 0x%08x into IR\n", (unsigned int)instruction.read());
       IR = instruction.read();
-      instructionOut.write(IR.read());
     }
   }
 
@@ -32,6 +31,8 @@ SC_MODULE (instruction_register) {
     shamt.write(IR.read()(10,6));
     funct.write(IR.read()(5,0));
     address.write(IR.read()(15,0));
+    inst_code.write(IR.read()(31,26));
+    instructionOut.write(IR.read());
   } // End of action
 
   // Constructor for register file

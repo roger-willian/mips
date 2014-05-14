@@ -14,10 +14,10 @@ void log(const char* msg, ...){
 
 void run(sc_signal<bool> *clock, int cycles){
   int i;
-  static int current = 0;
+  static int current = 1;
   
   for(i = 0; i < cycles; i++){
-      log("\n\n\nCLK: cycle %i\n", current++);
+      log("CLK: cycle %i\n", current++);
       clock -> write(0);
       sc_start(1, SC_NS);
       clock -> write(1);

@@ -11,7 +11,11 @@ SC_MODULE (register32) {
       output.write(input.read());
     }   
   }
-
+  
+  void showInfo(const char *name){
+    log("%s: content 0x%08x \n", name, (unsigned int)output.read());
+  }
+  
   SC_CTOR(register32) {
     SC_METHOD(action);
     sensitive << clock.pos();

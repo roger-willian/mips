@@ -6,7 +6,7 @@
 #include "register32.cpp"
 #include "ALU.cpp"
 
-SC_MODULE(mips){
+SC_MODULE(operational_unit){
   
   sc_in_clk                     clock ;         // P0: Clock input of the design
   
@@ -165,14 +165,45 @@ SC_MODULE(mips){
   
   void muxMemory(){
     if(IorD.read() == 1){
-      address.write(aluOut.read()); 
+      address.write(aluOut.read() & 0x0000FFFF); 
     }
     else{
-       address.write(pcOut.read()); 
+       address.write(pcOut.read() & 0x0000FFFF); 
     }
   }
   
-  SC_CTOR(mips) {
+  void showInfo(){
+    alu -> showInfo();
+    pc -> showInfo("PC");
+    
+    log("OU: pcOut              0x%08x\n", (unsigned int)pcOut.read());
+    log("OU: pcIn               0x%08x\n", (unsigned int)pcIn.read());
+    log("OU: enablePC           %d\n", (bool)enablePC.read());
+    log("OU: address            0x%08x\n", (unsigned int)address.read());
+    log("OU: memData            0x%08x\n", (unsigned int)memData.read());
+    log("OU: instAddress        0x%04x\n", (unsigned int)instAddress.read());
+    log("OU: shamt              %d\n", (unsigned int)shamt.read());
+    log("OU: funct              %d\n", (unsigned int)funct.read());
+    log("OU: rs                 %d\n", (unsigned int)rs.read());
+    log("OU: rt                 %d\n", (unsigned int)rt.read());
+    log("OU: rd                 %d\n", (unsigned int)rd.read());
+    log("OU: irOut              0x%08x\n", (unsigned int)irOut.read());
+    log("OU: dataA              0x%08x\n", (unsigned int)dataA.read());
+    log("OU: dataB              0x%08x\n", (unsigned int)dataB.read());
+    log("OU: addrWrite          %d\n", (unsigned int)addrWrite.read());
+    log("OU: addrA              %d\n", (unsigned int)addrA.read());
+    log("OU: addrB              %d\n", (unsigned int)addrB.read());
+    log("OU: dataWrite          0x%08x\n", (unsigned int)dataWrite.read());
+    log("OU: memoryDataRegisterOut 0x%08x\n", (unsigned int)memoryDataRegisterOut.read());
+    log("OU: memoryDataRegisterEnable %d\n", (bool)memoryDataRegisterEnable.read());
+    log("OU: zero               %d\n", (bool)zero.read());
+    log("OU: aluOut             0x%08x\n", (unsigned int)aluOut.read());
+    log("OU: srcA               0x%08x\n", (unsigned int)srcA.read());
+    log("OU: srcB               0x%08x\n", (unsigned int)srcB.read());
+    log("OU: aluResult          0x%08x\n", (unsigned int)aluResult.read());
+  }
+  
+  SC_CTOR(operational_unit) {
     ir = new instruction_register("IR");
       ir->clock(clock);
       ir->IRWrite(IRWrite);
