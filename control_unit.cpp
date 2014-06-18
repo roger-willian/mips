@@ -57,7 +57,7 @@ SC_MODULE (control_unit) {
   
   // Instruction register signals 
   sc_out< bool >                 IRWrite;        // P6
-  sc_in< sc_uint<6> >            inst_code;      // P7
+  sc_in< sc_uint<32> >            inst_code;      // P7
   
   // Register Bank Write Register Mux
   sc_out< bool >                 MemtoReg;       // P8: Memory or ALU
@@ -75,7 +75,7 @@ SC_MODULE (control_unit) {
   sc_out< sc_uint<2> >           ALUSrcB;        // P12
   
   // ALU signals
-  sc_out< sc_uint<2> >           ALUOp;          // P13
+  sc_out< sc_uint<6> >           ALUOp;          // P13
   
   // PC Source Mux signals
   sc_out< sc_uint<2> >           PCSource;       // P14
@@ -138,7 +138,7 @@ SC_MODULE (control_unit) {
         // PC <= AluOut
         // AluOut <= PC + (sign-extend(addr << 2))
         set_signals(X,1,X,0,0,X,0,X,0,0,3,ADD,1);
-        switch (inst_code.read()){
+        switch (inst_code.read()(31,26)){
           case R:
             next_st.write(EXECUTION);
             break;
@@ -160,7 +160,7 @@ SC_MODULE (control_unit) {
         break;
       case EXECUTION:
         // AluOut <= A op B
-        set_signals(0,0,X,X,0,X,0,X,0,1,0,FUN,X);
+        set_signals(0,0,X,X,0,X,0,X,0,1,0,inst_code.read()(5,0),X);
         next_st.write(R_COMPLETION);
         break;
       case R_COMPLETION:
@@ -171,7 +171,7 @@ SC_MODULE (control_unit) {
       case ADDR_COMPUTATION:
         // AluOut <= A + sign-extend(addr)
         set_signals(0,0,X,X,0,X,0,X,0,1,2,ADD,X);
-        if(inst_code.read() == ADDIU)
+        if(inst_code.read()(31,26) == ADDIU)
           next_st.write(ADDIU_COMPLETION);
         else
           next_st.write(MEMORY_ACCESS);
@@ -184,7 +184,7 @@ SC_MODULE (control_unit) {
       case MEMORY_ACCESS:
         // Load: MDR <= Memory[ALUOut] OR
         // Store: Memory[ALUOut] <= B
-        if (inst_code.read() == LW) {
+        if (inst_code.read()(31,26) == LW) {
           set_signals(0,0,1,1,0,X,0,X,0,X,X,NOP,X);
           next_st.write(MEM_READ_COMPLETION);
         } else {
@@ -208,7 +208,7 @@ SC_MODULE (control_unit) {
         next_st.write(FETCH);
         break;
       default:
-        log("CONTROL invalid %d\n", (unsigned int)inst_code.read());
+        log("CONTROL invalid %d\n", (unsigned int)inst_code.read()(31,26));
         return;
     }
     if(reset.read() == 1) {

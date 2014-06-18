@@ -28,14 +28,13 @@ SC_MODULE(operational_unit){
   
   // Instruction register signals 
   sc_in< bool >                 IRWrite;        // P6
-  sc_out< sc_uint<6> >          inst_code;      // P7
+  sc_out< sc_uint<32> >         irOut;          // P7 : instruction within IR
   sc_signal< sc_uint<16> >      instAddress;
   sc_signal< sc_uint<5> >       shamt;
   sc_signal< sc_uint<6> >       funct;
   sc_signal< sc_uint<5> >       rs;             // Source register
   sc_signal< sc_uint<5> >       rt;             // Target register
   sc_signal< sc_uint<5> >       rd;             // Destination register
-  sc_signal< sc_uint<32> >      irOut;          // instruction within IR
   
   // Register Bank Write Register Mux
   sc_in< bool >                 MemtoReg;       // P8: Memory or ALU
@@ -63,7 +62,7 @@ SC_MODULE(operational_unit){
   sc_in< sc_uint<2> >           ALUSrcB;        // P12
   
   // ALU signals
-  sc_in< sc_uint<2> >           ALUOp;          // P13
+  sc_in< sc_uint<6> >           ALUOp;          // P13
   sc_signal< bool >             zero;
   sc_signal< sc_uint<32> >      aluOut;         // ALU output
   sc_signal< sc_uint<32> >      srcA;
@@ -214,7 +213,6 @@ SC_MODULE(operational_unit){
       ir->address(instAddress);
       ir->shamt(shamt);
       ir->funct(funct);
-      ir->inst_code(inst_code);
       ir->instructionOut(irOut);
     
     mem = new memory("MEM");
@@ -249,7 +247,6 @@ SC_MODULE(operational_unit){
       alu->srcA(srcA);
       alu->srcB(srcB);
       alu->ALUOp(ALUOp);
-      alu->funct(funct);
       
    pc = new register32("PC");
       pc->clock(clock);

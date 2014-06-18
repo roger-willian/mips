@@ -1,6 +1,6 @@
 OBJ=main.o operational_unit.o functions.o
 EXE=sim
-CXXLFLAGS= -L. -L$(SYSTEMC_HOME)/lib-linux64 -lsystemc -lm
+CXXLFLAGS= -L. -L$(SYSTEMC_HOME)/lib-linux -lsystemc -lm
 CXXFLAGS= -I. -I$(SYSTEMC_HOME)/include
 ifdef DEBUG
   DFLAG=-DDEBUG
