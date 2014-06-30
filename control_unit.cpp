@@ -15,7 +15,9 @@ enum states {
   MEM_READ_COMPLETION,
   R_COMPLETION,
   MEMORY_ACCESS,
-  ADDIU_COMPLETION
+  ADDIU_COMPLETION,
+  IMM_EXECUTION,
+  IMM_COMPLETION
 };
 
 const char* states_names[]  = {
@@ -29,17 +31,11 @@ const char* states_names[]  = {
   "MEM_READ_COMPLETION",
   "R_COMPLETION",
   "MEMORY_ACCESS",
-  "ADDIU_COMPLETION"
+  "ADDIU_COMPLETION",
+  "IMM_EXECUTION",
+  "IMM_COMPLETION"
 };
 
-enum inst_classes {
-  R = 0,
-  LW = 35,
-  SW = 43,
-  B = 4,
-  J = 2,
-  ADDIU = 9
-};
 
 SC_MODULE (control_unit) {
   sc_in_clk             clock;
@@ -57,7 +53,7 @@ SC_MODULE (control_unit) {
   
   // Instruction register signals 
   sc_out< bool >                 IRWrite;        // P6
-  sc_in< sc_uint<32> >            inst_code;      // P7
+  sc_in< sc_uint<6> >            OpCode;      // P7
   
   // Register Bank Write Register Mux
   sc_out< bool >                 MemtoReg;       // P8: Memory or ALU
@@ -75,7 +71,7 @@ SC_MODULE (control_unit) {
   sc_out< sc_uint<2> >           ALUSrcB;        // P12
   
   // ALU signals
-  sc_out< sc_uint<6> >           ALUOp;          // P13
+  sc_out< sc_uint<3> >           ALUOp;          // P13
   
   // PC Source Mux signals
   sc_out< sc_uint<2> >           PCSource;       // P14
@@ -97,7 +93,7 @@ SC_MODULE (control_unit) {
                    bool regWrite,
                    bool aluSrcA,
                    sc_uint<2> aluSrcB,
-                   sc_uint<2> aluOp,
+                   sc_uint<6> aluOp,
                    sc_uint<2> pcSrc){
     PCWriteCond.write(pcWriteCond);
     PCWrite.write(pcWrite);
@@ -117,8 +113,33 @@ SC_MODULE (control_unit) {
   void action (){
     curr_st.write(next_st.read());
   }
+
+  int getType (int opCode){
+    int sr = opCode >> 3;
+    switch(sr){
+      case 0:
+        if(opCode == 0)
+          return TYPE_R;
+        else
+          return TYPE_B;
+        break;
+      case 1:
+        return TYPE_I;
+        break;
+      case 4:
+        return TYPE_L;
+        break;
+      case 5:
+        return TYPE_S;
+        break;
+      default:
+        return -1;
+        break;
+    }
+  }
   
   void logic () {
+    int type = getType(OpCode.read());
     
     switch (curr_st.read()){
       case PRE_FETCH:
@@ -138,20 +159,22 @@ SC_MODULE (control_unit) {
         // PC <= AluOut
         // AluOut <= PC + (sign-extend(addr << 2))
         set_signals(X,1,X,0,0,X,0,X,0,0,3,ADD,1);
-        switch (inst_code.read()(31,26)){
-          case R:
+        switch (type){
+          case TYPE_R:
             next_st.write(EXECUTION);
             break;
-          case LW:
-          case SW:
-          case ADDIU:
+          case TYPE_L:
+          case TYPE_S:
             next_st.write(ADDR_COMPUTATION);
             break;
-          case B:
-            next_st.write(BRANCH_COMPLETION);
+          case TYPE_I:
+            next_st.write(IMM_EXECUTION);
             break;
-          case J:
-            next_st.write(JUMP_COMPLETION);
+          case TYPE_B:
+            if(OpCode.read() == JUMP)
+              next_st.write(JUMP_COMPLETION);
+            else
+              next_st.write(BRANCH_COMPLETION);
             break;
           default:
             next_st.write(FETCH);
@@ -160,21 +183,28 @@ SC_MODULE (control_unit) {
         break;
       case EXECUTION:
         // AluOut <= A op B
-        set_signals(0,0,X,X,0,X,0,X,0,1,0,inst_code.read()(5,0),X);
+        set_signals(0,0,X,X,0,X,0,X,0,1,0,RTYPE,X);
         next_st.write(R_COMPLETION);
+        break;
+      case IMM_EXECUTION:
+        // AluOut <= A op IMM
+        set_signals(0,0,X,X,0,X,0,X,0,1,2,IMM,X);
+        next_st.write(IMM_COMPLETION);
         break;
       case R_COMPLETION:
         // Reg[rd] <= AluOut
         set_signals(0,0,X,X,0,0,0,1,1,X,X,NOP,X);
         next_st.write(FETCH);
         break;
+      case IMM_COMPLETION:
+        // Reg[rt] <= AluOut
+        set_signals(0,0,X,X,0,0,0,0,1,X,X,NOP,X);
+        next_st.write(FETCH);
+        break;
       case ADDR_COMPUTATION:
         // AluOut <= A + sign-extend(addr)
         set_signals(0,0,X,X,0,X,0,X,0,1,2,ADD,X);
-        if(inst_code.read()(31,26) == ADDIU)
-          next_st.write(ADDIU_COMPLETION);
-        else
-          next_st.write(MEMORY_ACCESS);
+        next_st.write(MEMORY_ACCESS);
         break;
       case ADDIU_COMPLETION:
         // Reg[rt] <= AluOut
@@ -184,7 +214,7 @@ SC_MODULE (control_unit) {
       case MEMORY_ACCESS:
         // Load: MDR <= Memory[ALUOut] OR
         // Store: Memory[ALUOut] <= B
-        if (inst_code.read()(31,26) == LW) {
+        if (OpCode.read() == LW) {
           set_signals(0,0,1,1,0,X,0,X,0,X,X,NOP,X);
           next_st.write(MEM_READ_COMPLETION);
         } else {
@@ -198,8 +228,8 @@ SC_MODULE (control_unit) {
         next_st.write(FETCH);
         break;
       case BRANCH_COMPLETION:
-        // if(A == B) PC <= AluOut
-        set_signals(1,0,X,X,0,X,0,X,0,1,0,SUB,1);
+        // if(zero) then PC <= AluOut
+        set_signals(1,0,X,X,0,X,0,X,0,1,0,BRANCH,1);
         next_st.write(FETCH);
         break;
       case JUMP_COMPLETION:
@@ -208,7 +238,7 @@ SC_MODULE (control_unit) {
         next_st.write(FETCH);
         break;
       default:
-        log("CONTROL invalid %d\n", (unsigned int)inst_code.read()(31,26));
+        log("CONTROL invalid %d\n", (unsigned int)OpCode.read()(31,26));
         return;
     }
     if(reset.read() == 1) {
@@ -218,7 +248,7 @@ SC_MODULE (control_unit) {
   }
   
   void showInfo(){
-    log("CONTROL: inst_code 0x%08x \n", (unsigned int)inst_code.read());
+    log("CONTROL: OpCode 0x%08x \n", (unsigned int)OpCode.read());
     log("CONTROL: curr_st %s \n", states_names[curr_st.read()]);
     log("CONTROL: next_st %s \n", states_names[next_st.read()]);
   }
@@ -227,7 +257,7 @@ SC_MODULE (control_unit) {
     SC_METHOD(action);
     sensitive << clock.pos();
     SC_METHOD(logic);
-    sensitive << inst_code;
+    sensitive << OpCode;
     sensitive << reset;
     sensitive << curr_st;
   }

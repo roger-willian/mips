@@ -1,4 +1,5 @@
 #include "systemc.h"
+#include "functions.h"
 
 SC_MODULE (register32) {
   sc_in_clk             clock;

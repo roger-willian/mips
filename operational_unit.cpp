@@ -5,6 +5,7 @@
 #include "register_file.cpp"
 #include "register32.cpp"
 #include "ALU.cpp"
+#include "ALU_control.cpp"
 
 SC_MODULE(operational_unit){
   
@@ -28,7 +29,8 @@ SC_MODULE(operational_unit){
   
   // Instruction register signals 
   sc_in< bool >                 IRWrite;        // P6
-  sc_out< sc_uint<32> >         irOut;          // P7 : instruction within IR
+  sc_out< sc_uint<6> >          OpCode;         // P7
+  sc_signal< sc_uint<32> >      irOut;          // instruction within IR
   sc_signal< sc_uint<16> >      instAddress;
   sc_signal< sc_uint<5> >       shamt;
   sc_signal< sc_uint<6> >       funct;
@@ -60,14 +62,20 @@ SC_MODULE(operational_unit){
   
   // ALUSrcB Mux signals
   sc_in< sc_uint<2> >           ALUSrcB;        // P12
+  sc_signal< sc_uint<32> >      extended;
+  
+  // ALUControl signals
+  sc_in< sc_uint<3> >           ALUOp;          // P13
+  sc_signal< sc_uint<4> >       ALUControl;
+  sc_signal< bool >             invertZero;
+  
   
   // ALU signals
-  sc_in< sc_uint<6> >           ALUOp;          // P13
   sc_signal< bool >             zero;
   sc_signal< sc_uint<32> >      aluOut;         // ALU output
   sc_signal< sc_uint<32> >      srcA;
   sc_signal< sc_uint<32> >      srcB;
-  sc_signal< sc_uint<32> >      aluResult;  
+  sc_signal< sc_uint<32> >      aluResult;
   
   // PC Source Mux signals
   sc_in< sc_uint<2> >           PCSource;       // P14
@@ -78,6 +86,7 @@ SC_MODULE(operational_unit){
   register32 * memoryDataRegister;
   ALU * alu;
   register32 * pc;
+  alu_control * alucontrol;
   
   void dumpMemory(){
     mem->dumpMem();
@@ -110,6 +119,24 @@ SC_MODULE(operational_unit){
     }
   }
   
+  void signOrZeroExtend(){
+    switch(OpCode.read()){
+      case ANDI:
+      case ORI:
+      case XORI:
+        // zero extend
+        extended.write((unsigned int)instAddress.read());
+        break;
+      default:
+        // sign extend
+        if(instAddress.read()(15,15))
+          extended.write(0xffff0000 | (unsigned int)instAddress.read());
+        else
+          extended.write((unsigned int)instAddress.read());
+        break;
+    }
+  }
+  
   void muxAluSrcB(){
     switch(ALUSrcB.read()){
       case 0:
@@ -119,18 +146,11 @@ SC_MODULE(operational_unit){
         srcB.write(4);
         break;
       case 2:
-        // sign extend
-        if(instAddress.read()(15,15))
-          srcB.write(0xffff0000 | (unsigned int)instAddress.read());
-        else
-          srcB.write((unsigned int)instAddress.read());
+        srcB.write(extended.read());
         break;
       default:
         // sign extend with 2 shifts left
-        if(instAddress.read()(15,15))
-          srcB.write((0xffff0000 | (unsigned int)instAddress.read()) << 2);
-        else
-          srcB.write(((unsigned int)instAddress.read()) << 2);
+        srcB.write(extended.read() << 2);
         break;
     }
   }
@@ -154,6 +174,7 @@ SC_MODULE(operational_unit){
   }
   
   void enablePCLogic(){
+
     if((zero.read() && PCWriteCond.read()) || PCWrite.read() ){
       enablePC.write(1);
     }
@@ -207,6 +228,7 @@ SC_MODULE(operational_unit){
       ir->clock(clock);
       ir->IRWrite(IRWrite);
       ir->instruction(memData);
+      ir->OpCode(OpCode);
       ir->rs(rs);
       ir->rt(rt);
       ir->rd(rd);
@@ -246,8 +268,17 @@ SC_MODULE(operational_unit){
       alu->aluOut(aluOut);
       alu->srcA(srcA);
       alu->srcB(srcB);
-      alu->ALUOp(ALUOp);
+      alu->ALUControl(ALUControl);
+      alu->shamt(shamt);
+      alu->InvertZero(invertZero);
       
+   alucontrol = new alu_control("ALUControl");
+      alucontrol->OpCode(OpCode);
+      alucontrol->funct(funct);
+      alucontrol->ALUOp(ALUOp);
+      alucontrol->ALUControl(ALUControl);
+      alucontrol->InvertZero(invertZero);
+  
    pc = new register32("PC");
       pc->clock(clock);
       pc->enable(enablePC);
@@ -275,7 +306,7 @@ SC_MODULE(operational_unit){
     SC_METHOD(muxAluSrcB){
       sensitive << ALUSrcB;
       sensitive << dataB;
-      sensitive << instAddress;
+      sensitive << extended;
     }
     
     SC_METHOD(muxPC){
@@ -295,6 +326,11 @@ SC_MODULE(operational_unit){
       sensitive << IorD;
       sensitive << aluOut;
       sensitive << pcOut;
+    }
+
+    SC_METHOD(signOrZeroExtend){
+      sensitive << OpCode;
+      sensitive << instAddress;
     }
     
     memoryDataRegisterEnable.write(1);

@@ -1,8 +1,9 @@
 #include "systemc.h"
+#include "functions.h"
 #include <stdio.h>
 
 #ifndef MEM_SIZE
-#define MEM_SIZE 64
+#define MEM_SIZE 256
 #endif
 
 SC_MODULE(memory){

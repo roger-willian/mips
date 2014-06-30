@@ -1,4 +1,5 @@
 #include "systemc.h"
+#include "functions.h"
 
 SC_MODULE (register_file) {
   sc_in_clk    clock ;      // Clock input of the design
@@ -18,12 +19,14 @@ SC_MODULE (register_file) {
   void action () {
     if (RegWrite.read() == 1) {
       if (addrWrite.read() != 0){
+       
 #ifdef DEBUG
         printf("REG_BANK: Writing 0x%08x into register #%i\n", (unsigned int)dataWrite.read(), (unsigned short)addrWrite.read());
 #endif
         bank[addrWrite.read()] = dataWrite.read();
       }
     }
+    
 #ifdef DEBUG
         puts("REG_BANK: outputs");
         printf("\tA: 0x%08x\n", (unsigned int)bank[addrA.read()]);

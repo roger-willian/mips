@@ -6,6 +6,7 @@ SC_MODULE (instruction_register) {
   sc_in< bool > IRWrite;
   sc_in< sc_uint<32> > instruction; // 32 bit vector
   sc_out< sc_uint<32> > instructionOut; // 32 bit vector
+  sc_out< sc_uint<6> > OpCode;
   sc_out< sc_uint<5> > rs; // 5 bit vector 
   sc_out< sc_uint<5> > rt; // 5 bit vector 
   sc_out< sc_uint<5> > rd; // 5 bit vector
@@ -24,6 +25,7 @@ SC_MODULE (instruction_register) {
   }
 
   void output() {
+    OpCode.write(IR.read()(31,26));
     rs.write(IR.read()(25,21));
     rt.write(IR.read()(20,16));
     rd.write(IR.read()(15,11));

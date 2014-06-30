@@ -22,8 +22,8 @@ int sc_main(int argc, char ** argv){
   sc_signal< bool >             MemtoReg;
   
   // Instruction register
+  sc_signal< sc_uint<6> >       OpCode;
   sc_signal< bool >             IRWrite;
-  sc_signal< sc_uint<32> >      inst_code;
   
   // Register Bank Write Register
   sc_signal< bool >             RegDst;
@@ -34,7 +34,7 @@ int sc_main(int argc, char ** argv){
   // ALU signals
   sc_signal< bool >             ALUSrcA;
   sc_signal< sc_uint<2> >       ALUSrcB;
-  sc_signal< sc_uint<6> >       ALUOp;
+  sc_signal< sc_uint<3> >       ALUOp;
   
   // PC Source signals
   sc_signal< sc_uint<2> >       PCSource;
@@ -55,7 +55,7 @@ int sc_main(int argc, char ** argv){
     ou.MemWrite(MemWrite);
     ou.MemtoReg(MemtoReg);
     ou.IRWrite(IRWrite);
-    ou.irOut(inst_code);
+    ou.OpCode(OpCode);
     ou.RegDst(RegDst);
     ou.RegWrite(RegWrite);
     ou.ALUSrcA(ALUSrcA);  
@@ -71,7 +71,7 @@ int sc_main(int argc, char ** argv){
     control.MemWrite(MemWrite);
     control.MemtoReg(MemtoReg);
     control.IRWrite(IRWrite);
-    control.inst_code(inst_code);
+    control.OpCode(OpCode);
     control.RegDst(RegDst);
     control.RegWrite(RegWrite);
     control.ALUSrcA(ALUSrcA);  

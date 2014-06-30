@@ -1,16 +1,17 @@
 main:
-# carrega para o R2
-        addiu $2, $zero, 6
-# carrega para o R3
-        addiu $3, $zero, 6
-# pula
-	beq $2, $3, teste
-# armazena o R4 na posicao 32
-	sw  $2, 32($zero)
-# carrega para o R2
-        nop
-        nop
-teste:
-        addiu $2, $zero, 7
+  addiu $2, $zero, 505
+  addiu $3, $zero, 500
 
+  
+  sub $4, $2, $3
+  subu $4, $2, $3
+  nop
+  addiu $2, $zero, 51
+  addiu $3, $zero, 56
+  xor $4, $2, $3
+  xori $4, $3, 18
+  nop
+  
+  
+  
 
